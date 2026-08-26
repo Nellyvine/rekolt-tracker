@@ -1,182 +1,105 @@
 package mu.rekolt.app;
 
+import mu.rekolt.model.*;
+import mu.rekolt.service.ProduceCatalog;
+import mu.rekolt.service.SeasonService;
+import mu.rekolt.util.ConsoleInput;
+import mu.rekolt.util.Formatter;
+
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
+        ConsoleInput input = new ConsoleInput(scanner);
+        ProduceCatalog catalog = new ProduceCatalog();
+        SeasonService season = new SeasonService();
 
-        String memberId = readValidMemberId(scanner);
-        String memberName = readValidName(scanner);
-        String produceCode = readValidProduceCode(scanner);
-        double massKg = readValidMass(scanner);
-        int qualityScore = readValidQualityScore(scanner);
-        int week = readValidWeek(scanner);
+        boolean running = true;
+        while (running) {
+            System.out.println();
+            System.out.println("REKOLT PRODUCE TRACKER  -  season 2026");
+            System.out.println("1. Record a delivery          3. Generate the season report");
+            System.out.println("2. Season figures on screen   4. Exit");
+            System.out.println();
 
-        double basePricePerKg = getBasePrice(produceCode);      // switch statement
-        String grade = getGrade(qualityScore);                   // if/else-if
-        double gradeMultiplier = getGradeMultiplier(qualityScore);
-        double categoryMultiplier = getCategoryMultiplier(produceCode);
+            int choice = input.readMenuOption();
 
-        double baseValue = massKg * basePricePerKg;
-        double afterGrade = baseValue * gradeMultiplier;
-        double afterCategory = afterGrade * categoryMultiplier;
-        double commission = afterCategory * 0.05;
-        double transportLevy = massKg * 2.0;
-        double netPayable = afterCategory - commission - transportLevy;
+            switch (choice) {
+                case 1:
+                    recordDelivery(input, catalog, season);
+                    break;
+                case 2:
+                    printSeasonFigures(season);
+                    break;
+                case 3:
+                    System.out.println("(Word report generation is next on our list.)");
+                    break;
+                case 4:
+                    System.out.println("Goodbye.");
+                    running = false;
+                    break;
+            }
+        }
+    }
+
+    private static void recordDelivery(ConsoleInput input, ProduceCatalog catalog, SeasonService season) {
+        String memberId = input.readMemberId();
+        String memberName = input.readName();
+        String produceCode = input.readProduceCode();
+        double massKg = input.readMass();
+        int qualityScore = input.readQualityScore();
+        int week = input.readWeek();
+
+        Member member = new Member(memberId, memberName);
+        Produce produce = catalog.get(produceCode);
+        Delivery delivery = new Delivery(member, produce, massKg, qualityScore, week);
+
+        season.recordDelivery(delivery);
 
         System.out.println();
-        System.out.println("Delivery recorded for " + memberId + " (" + memberName + ")  Grade " + grade + ", week " + week);
-        System.out.printf("  Base value        %s%n", format(baseValue));
-        System.out.printf("  After grade                    = %s%n", format(afterGrade));
-        System.out.printf("  After category                 = %s%n", format(afterCategory));
-        System.out.printf("  Commission 5%%                  - %s%n", format(commission));
-        System.out.printf("  Transport levy                 - %s%n", format(transportLevy));
-        System.out.printf("  NET PAYABLE                    = %s MUR%n", format(netPayable));
+        System.out.println("Delivery " + delivery.getId() + " recorded.  Grade " + delivery.getGrade());
+        System.out.printf("  NET PAYABLE                          = %s MUR%n", Formatter.money(delivery.calculateNetPayable()));
     }
 
-    private static String format(double value) {
-        return String.format("%,.2f", value);
-    }
+    private static void printSeasonFigures(SeasonService season) {
+        System.out.println();
+        System.out.println("Total payment per member (MUR)");
+        for (Map.Entry<String, Double> entry : season.getTotalPaymentPerMember().entrySet()) {
+            Member member = season.getMembers().get(entry.getKey());
+            System.out.printf("  %s  %-20s  %s%n", entry.getKey(), member.getName(), Formatter.money(entry.getValue()));
+        }
 
-    // ---------- validated input methods ----------
+        System.out.println();
+        System.out.println("Weekly volume grid (kg)");
+        String[] codes = season.getProduceOrder();
+        System.out.printf("%6s", "Week");
+        for (String code : codes) System.out.printf("%9s", code);
+        System.out.printf("%9s%n", "Total");
 
-    private static String readValidMemberId(Scanner scanner) {
-        while (true) {
-            System.out.print("Member identifier              : ");
-            String input = scanner.nextLine().trim();
-            if (input.matches("^M-\\d{4}$")) {
-                return input;
+        double[][] grid = season.getWeeklyGrid();
+        for (int week = 0; week < grid.length; week++) {
+            double rowTotal = 0;
+            boolean hasData = false;
+            for (int col = 0; col < grid[week].length; col++) {
+                if (grid[week][col] > 0) hasData = true;
+                rowTotal += grid[week][col];
             }
-            System.out.println("  Member ID must look like M-0042. Please try again.");
+            if (!hasData) continue;
+            System.out.printf("%6d", week + 1);
+            for (int col = 0; col < grid[week].length; col++) System.out.printf("%9.1f", grid[week][col]);
+            System.out.printf("%9.1f%n", rowTotal);
         }
-    }
 
-    private static String readValidName(Scanner scanner) {
-        while (true) {
-            System.out.print("Member name                    : ");
-            String input = scanner.nextLine().trim();
-            if (!input.isEmpty()) {
-                return input;
-            }
-            System.out.println("  Name cannot be empty. Please try again.");
-        }
-    }
-
-    private static String readValidProduceCode(Scanner scanner) {
-        while (true) {
-            System.out.print("Produce code (MZE/BNS/POT/TEA) : ");
-            String input = scanner.nextLine().trim().toUpperCase();
-            if (input.equals("MZE") || input.equals("BNS") || input.equals("POT") || input.equals("TEA")) {
-                return input;
-            }
-            System.out.println("  Produce code must be MZE, BNS, POT or TEA. Please try again.");
-        }
-    }
-
-    private static double readValidMass(Scanner scanner) {
-        while (true) {
-            System.out.print("Mass in kg                     : ");
-            String input = scanner.nextLine();
-            try {
-                double mass = Double.parseDouble(input);
-                if (mass > 0 && mass <= 5000) {
-                    return mass;
-                }
-                System.out.println("  Mass must be above 0 and not more than 5000. Please try again.");
-            } catch (NumberFormatException e) {
-                System.out.println("  That's not a valid number. Please try again.");
-            }
-        }
-    }
-
-    private static int readValidQualityScore(Scanner scanner) {
-        while (true) {
-            System.out.print("Quality score (0-100)          : ");
-            String input = scanner.nextLine();
-            try {
-                int score = Integer.parseInt(input);
-                if (score >= 0 && score <= 100) {
-                    return score;
-                }
-                System.out.println("  Quality score must be between 0 and 100. Please try again.");
-            } catch (NumberFormatException e) {
-                System.out.println("  That's not a whole number. Please try again.");
-            }
-        }
-    }
-
-    private static int readValidWeek(Scanner scanner) {
-        while (true) {
-            System.out.print("Week of delivery (1-20)        : ");
-            String input = scanner.nextLine();
-            try {
-                int week = Integer.parseInt(input);
-                if (week >= 1 && week <= 20) {
-                    return week;
-                }
-                System.out.println("  Week must be between 1 and 20. Please try again.");
-            } catch (NumberFormatException e) {
-                System.out.println("  That's not a whole number. Please try again.");
-            }
-        }
-    }
-
-    // ---------- grading and pricing ----------
-
-    // if/else-if: grade boundaries
-    private static String getGrade(int qualityScore) {
-        if (qualityScore >= 85) {
-            return "A";
-        } else if (qualityScore >= 70) {
-            return "B";
-        } else if (qualityScore >= 50) {
-            return "C";
-        } else {
-            return "REJECT";
-        }
-    }
-
-    private static double getGradeMultiplier(int qualityScore) {
-        if (qualityScore >= 85) {
-            return 1.15;
-        } else if (qualityScore >= 70) {
-            return 1.00;
-        } else if (qualityScore >= 50) {
-            return 0.85;
-        } else {
-            return 0.00;
-        }
-    }
-
-    // switch: produce code -> base price
-    private static double getBasePrice(String produceCode) {
-        switch (produceCode) {
-            case "MZE":
-                return 30.0;
-            case "BNS":
-                return 90.0;
-            case "POT":
-                return 45.0;
-            case "TEA":
-                return 25.0;
-            default:
-                throw new IllegalArgumentException("Unknown produce code: " + produceCode);
-        }
-    }
-
-    // switch: produce code -> category multiplier
-    private static double getCategoryMultiplier(String produceCode) {
-        switch (produceCode) {
-            case "MZE":
-            case "BNS":
-                return 1.00; // cereal
-            case "POT":
-                return 0.90; // perishable
-            case "TEA":
-                return 1.10; // cash crop
-            default:
-                throw new IllegalArgumentException("Unknown produce code: " + produceCode);
+        System.out.println();
+        System.out.println("Top five deliveries by value");
+        List<Delivery> top = season.topDeliveriesByValue(5);
+        int rank = 1;
+        for (Delivery d : top) {
+            System.out.println("  " + rank + ". " + d.toReportLine());
+            rank++;
         }
     }
 }
