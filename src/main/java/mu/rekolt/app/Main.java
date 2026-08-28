@@ -2,6 +2,8 @@ package mu.rekolt.app;
 
 import mu.rekolt.model.*;
 import mu.rekolt.service.ProduceCatalog;
+import mu.rekolt.service.DocumentService;
+import mu.rekolt.service.ReportGenerationException;
 import mu.rekolt.service.SeasonService;
 import mu.rekolt.util.ConsoleInput;
 import mu.rekolt.util.Formatter;
@@ -14,6 +16,7 @@ public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         ConsoleInput input = new ConsoleInput(scanner);
+        DocumentService documentService = new DocumentService();
         ProduceCatalog catalog = new ProduceCatalog();
         SeasonService season = new SeasonService();
 
@@ -35,7 +38,13 @@ public class Main {
                     printSeasonFigures(season);
                     break;
                 case 3:
-                    System.out.println("(Word report generation is next on our list.)");
+                    try {
+                        System.out.println("Writing output/season-report.docx ...");
+                        documentService.generateSeasonReport(season);
+                        System.out.println(season.getMemberIds().size() + " member sections, done.");
+                    } catch (ReportGenerationException e) {
+                        System.out.println("Report generation failed: " + e.getMessage());
+                    }
                     break;
                 case 4:
                     System.out.println("Goodbye.");
