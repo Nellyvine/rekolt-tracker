@@ -2,6 +2,7 @@ package mu.rekolt.service;
 
 import mu.rekolt.model.Delivery;
 import mu.rekolt.model.Member;
+import mu.rekolt.model.Grade;
 import mu.rekolt.util.Formatter;
 import org.apache.poi.xwpf.usermodel.*;
 
@@ -113,8 +114,10 @@ public class DocumentService {
             row.getCell(4).setText(String.valueOf(d.getWeek()));
             row.getCell(5).setText(Formatter.money(d.calculateNetPayable()));
 
-            commissionTotal += d.getCommission();
-            levyTotal += d.getTransportLevy();
+            if (d.getGrade() != Grade.REJECT) {
+                commissionTotal += d.getCommission();
+                levyTotal += d.getTransportLevy();
+            }
         }
 
         document.createParagraph().createRun()
@@ -143,7 +146,7 @@ public class DocumentService {
 
         double grandTotal = 0;
         for (double v : season.getTotalPaymentPerMember().values()) {
-            grandTotal += v;
+            grandTotal += Math.round(v * 100.0) / 100.0;
         }
 
         document.createParagraph().createRun()
