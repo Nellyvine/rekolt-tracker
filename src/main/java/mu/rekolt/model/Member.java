@@ -2,7 +2,7 @@ package mu.rekolt.model;
 
 import java.util.Objects;
 
-public class Member {
+public class Member implements Reportable {
     private final String id;
     private final String name;
 
@@ -35,5 +35,9 @@ public class Member {
     @Override
     public int hashCode() {
         return Objects.hash(id);
+    }
+    @Override
+    public String toReportLine() {
+        return id + " - " + name;
     }
 }
