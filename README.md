@@ -49,6 +49,7 @@ On launch, the console presents a menu:
 
 ## Project Structure
 
+##
 rekolt-tracker/
 ├── docs/
 │ ├── setup/ JDK, IDE and git setup evidence
@@ -65,6 +66,8 @@ rekolt-tracker/
 ├── service/ ProduceCatalog, SeasonService, DocumentService
 └── util/ ConsoleInput, Formatter
 
+
+##
 
 ## Payment Calculation Rules
 
@@ -86,10 +89,10 @@ All intermediate values are computed at full `double` precision; rounding to two
 ![Main menu](docs/screenshots/1.png)
 
 ### Season figures on screen
-![Season figures](2.png)
+![Season figures](docs/Screenshots/2.png)
 
 ### Generated season-report.docx & Exit
-![Season report excerpt & Exit](3.png)
+![Season report excerpt & Exit](docs/Screenshots/3.png)
 
 
 ## Documentation
