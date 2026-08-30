@@ -36,7 +36,7 @@ worse random-access and cache locality would be a real cost every time the list 
 Why: the report needs to look up "what does member M-0042 owe in total" by ID,
 repeatedly, without caring about the order members were first seen. `HashMap` gives O(1)
 average lookup and update, which matters because `recordDelivery()` updates this map on
-every single delivery recorded — a season of hundreds of deliveries means hundreds of
+every single delivery recorded, a season of hundreds of deliveries means hundreds of
 these updates.
 
 Rejected alternative: `TreeMap<String, Double>`, which would keep members in sorted ID
@@ -87,7 +87,7 @@ without the class having to choose one as "correct."
 `nonRejectedDeliveries()` explicitly uses `Iterator.remove()` rather than the shorter
 `list.removeIf(...)`. This was a deliberate choice to demonstrate the underlying mechanism:
 a `List` can only be safely mutated during traversal through its own iterator's `remove()`
-method — an ordinary for-each loop calling `list.remove()` directly throws a
+method, an ordinary for-each loop calling `list.remove()` directly throws a
 `ConcurrentModificationException`, since the list detects it was changed by something other
 than the iterator that's currently walking it. `removeIf()` hides that mechanism inside the
 JDK; the explicit `Iterator` version shows it.
